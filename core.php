@@ -1,6 +1,26 @@
 <?php
 
 /**
+ * 生成一个随机的UUID
+ *
+ * @return string 返回生成的UUID
+ */
+function generateRandomUUID(): string
+{
+    $data = openssl_random_pseudo_bytes(16);
+    $data[6] = chr((ord($data[6]) & 0x0f) | 0x40);
+    $data[8] = chr((ord($data[8]) & 0x3f) | 0x80);
+    return sprintf(
+        '%08s-%04s-%04s-%04s-%12s',
+        bin2hex(substr($data, 0, 4)),
+        bin2hex(substr($data, 4, 2)),
+        bin2hex(substr($data, 6, 2)),
+        bin2hex(substr($data, 8, 2)),
+        bin2hex(substr($data, 10, 6))
+    );
+}
+
+/**
  * 生成加密前的 JSON 字符串
  *
  * @param string $appVersion 应用版本号
@@ -28,7 +48,7 @@ function generateJsonString(string $appVersion, string $uin, string $appid): str
                 "osVersion" => "34",
                 "is64Bit" => true,
                 "bundleId" => "com.tencent.mobileqq",
-                "uniqueId" => "b3726e8a-b924-48b9-90c9-3e6740e5d96f",
+                "uniqueId" => generateRandomUUID(),
                 "model" => "2304FPN6DC"
             ),
             "isDebugPackage" => false,
@@ -37,7 +57,7 @@ function generateJsonString(string $appVersion, string $uin, string $appid): str
             )
         ),
         "taskChecksum" => "0",
-        "context" => "" // H4sIAAAAAAAA/+Li5ni5T1WIVaBT1INRS8HS0MwyMdnCwMzQMCklxdQ81cTC1MzIIDnV0DIxydLYGAAAAP//AQAA//+OoFcLLwAAAA==
+        "context" => "H4sIAAAAAAAA/+Li5ni5T1WIVaBT1INRS8HS0MwyMdnCwMzQMCklxdQ81cTC1MzIIDnV0DIxydLYGAAAAP//AQAA//+OoFcLLwAAAA=="
     );
     return json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 }

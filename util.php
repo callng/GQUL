@@ -51,6 +51,10 @@ function aesDecrypt($data, $key): string|false
 
 function base64ToRsaPublicKey($base64String): OpenSSLAsymmetricKey|false
 {
+    if (!function_exists('openssl_pkey_get_public')) {
+        error_log('请开启openssl扩展');
+        return false;
+    }
     $pem = "-----BEGIN PUBLIC KEY-----\n"
         . wordwrap($base64String, 64, "\n", true)
         . "\n-----END PUBLIC KEY-----";
@@ -59,6 +63,10 @@ function base64ToRsaPublicKey($base64String): OpenSSLAsymmetricKey|false
 
 function rsaEncrypt($data, $publicKey): false|string
 {
+    if (!function_exists('openssl_public_encrypt')) {
+        error_log('请开启openssl扩展');
+        return false;
+    }
     $encryptedData = '';
     $success = openssl_public_encrypt($data, $encryptedData, $publicKey, OPENSSL_PKCS1_PADDING);
     if (!$success) {
