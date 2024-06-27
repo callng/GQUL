@@ -57,7 +57,7 @@ function getFileInfo(string $url): false|array
     }
     $sizeMB = number_format($contentLength / (1024 * 1024), 2);
     return [
-        'md5' => $md5 ?? null,
+        'md5' => $md5,
         'sizeMB' => $sizeMB
     ];
 }
@@ -223,10 +223,11 @@ function extractAndPrintFiles(string $centralDirectoryData, string $url, array $
             }
             $fileContent = str_replace("\n", '', $fileContent);
         }
+        $lastModified = date("Y-m-d H:i:s", dosToUnixTime($entry['lastModTime'], $entry['lastModDate']));
         $fileInfo = [
             'fileName' => substr($fileName, strrpos($fileName, '/') + 1),
             'crc32' => sprintf("%08x", $entry['crc32']),
-            'lastModified' => date("Y-m-d H:i:s", dosToUnixTime($entry['lastModTime'], $entry['lastModDate'])) === '1979-11-30 00:00:00' ?? null,
+            'lastModified' => ($lastModified === '1979-11-30 00:00:00') ? null : $lastModified
         ];
         if (str_contains($fileName, 'libfekit.so')) {
             $fileInfo['sizeMB'] = number_format($entry['uncompressedSize'] / (1024 * 1024), 2);
