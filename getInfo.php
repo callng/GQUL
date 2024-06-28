@@ -256,11 +256,32 @@ function dosToUnixTime(int $dosTime, int $dosDate): false|int
     return mktime($hours, $minutes, $seconds, $month, $day, $year);
 }
 
+header('Content-Type: application/json');
 $param = getParameters();
 if ($param === false) {
     die('Bad Request');
 }
 $apkUrl = $param['url'];
+$apkUrlBase64 = base64_encode($apkUrl);
+try {
+    $redis = new Redis();
+    $redis->connect('127.0.0.1');
+    $password = '114514';
+    if (!$redis->auth($password)) {
+        throw new RedisException('Redis authentication failed');
+    }
+    $redis->select(7);
+    if ($redis->exists($apkUrlBase64)) {
+        $result = $redis->get($apkUrlBase64);
+        $redis->close();
+        exit($result);
+    }
+} catch (RedisException $e) {
+    $result = [
+        'error' => 'Redis error：'.$e->getMessage()
+    ];
+    exit(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+}
 $eocd = findEndOfCentralDirectory($apkUrl);
 if (!$eocd || !isset($eocd['centralDirectoryOffset'], $eocd['centralDirectorySize'])) {
     die("Failed to retrieve EOCD information.");
@@ -269,12 +290,20 @@ $centralDirectoryData = downloadData($apkUrl, $eocd['centralDirectoryOffset'] . 
 if (!$centralDirectoryData) {
     die("Failed to download central directory.");
 }
-header('Content-Type: application/json');
 $fileJson = extractAndPrintFiles($centralDirectoryData, $apkUrl, $filesToExtract);
 $fileInfo = getFileInfo($apkUrl);
 if ($fileInfo) {
     $fileInfo['files'] = json_decode($fileJson, true);
-    exit(json_encode($fileInfo, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    $result = json_encode($fileInfo, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 } else {
-    exit($fileJson);
+    $result = json_encode(json_decode($fileJson, true), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 }
+try {
+    $redis->set($apkUrlBase64, $result, 86400 * 30 * 12);
+} catch (RedisException $e) {
+    $result = [
+        'error' => 'Redis error：'.$e->getMessage()
+    ];
+    exit(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+}
+exit($result);
