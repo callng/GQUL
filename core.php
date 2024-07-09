@@ -25,10 +25,9 @@ function generateRandomUUID(): string
  *
  * @param string $appVersion 应用版本号
  * @param string $uin QQ号
- * @param string $appid 应用ID
  * @return string 返回生成的 JSON 字符串
  */
-function generateJsonString(string $appVersion, string $uin, string $appid): string
+function generateJsonString(string $appVersion, string $uin): string
 {
     $timestamp = time();
     $data = array(
@@ -53,7 +52,7 @@ function generateJsonString(string $appVersion, string $uin, string $appid): str
             ),
             "isDebugPackage" => false,
             "customProperties" => array(
-                "appid" => $appid
+                "appid" => '537230561' // 发现不需要指定appid,那就固定起来吧
             )
         ),
         "taskChecksum" => "0",

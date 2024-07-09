@@ -11,7 +11,7 @@ if ($param === false) {
     exit(jsonExit(400, 'Bad Request')); // 参数错误
 }
 $key = generateAESKey(); // 生成AES密钥
-$data = generateJsonString($param['version'], $param['uin'], $param['appid']); // 生成JSON字符串
+$data = generateJsonString($param['version'], $param['uin']); // 生成JSON字符串
 $encode = aesEncrypt($data, $key); // 加密JSON字符串
 $rsaPublicKey = base64ToRsaPublicKey('MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC/rT6ULqXC32dgz4t/Vv4WS9pTks5Z2fPmbTHIXEVeiOEnjOpPBHOi1AUz+Ykqjk11ZyjidUwDyIaC/VtaC5Z7Bt/W+CFluDer7LiiDa6j77if5dbcvWUrJbgvhKqaEhWnMDXT1pAG2KxL/pNFAYguSLpOh9pK97G8umUMkkwWkwIDAQAB'); // 解析公钥
 $encode2 = rsaEncrypt($key, $rsaPublicKey); // 使用RSA公钥加密AES密钥
