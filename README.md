@@ -20,7 +20,7 @@ versions.
 send.php?uin=114514&version=9.0.70%236676%230
 ```
 
-    - Optional:
+- Optional:
 
 ```get
 send.php?uin=114514&version=9.0.70%236676%230&appid=537228245
