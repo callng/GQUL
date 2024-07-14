@@ -22,27 +22,15 @@ function postJsonWithCurl($url, $data): bool|string
 
 function getParameters(): false|array
 {
-    $requiredParams = ['uin', 'version', 'appid'];
+    $requiredParams = ['uin', 'version'];
     $result = [];
     foreach ($requiredParams as $param) {
-        if ($param === 'appid') {
-            if (!empty($_GET['uin']) && !empty($_GET['version'])) {
-                if (!empty($_GET['appid'])) {
-                    $result['appid'] = $_GET['appid'];
-                }
-            }
+        if (!empty($_GET[$param])) {
+            $result[$param] = $_GET[$param];
         } else {
-            if (!empty($_GET[$param])) {
-                $result[$param] = $_GET[$param];
-            } else {
-                return false;
-            }
+            return false;
         }
     }
-
-    if (isset($result['uin']) && isset($result['version'])) {
-        return $result;
-    } else {
-        return false;
-    }
+    $result['appid'] = !empty($_GET['appid']) ? $_GET['appid'] : null;
+    return $result;
 }

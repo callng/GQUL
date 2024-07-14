@@ -27,9 +27,8 @@ function generateRandomUUID(): string
  * @param string $uin QQ号
  * @return string 返回生成的 JSON 字符串
  */
-function generateJsonString(string $appVersion, string $uin, string $appid = '537230561'): string
+function generateJsonString(string $appVersion, string $uin, string $appid = null): string
 {
-    error_log($appid);
     $timestamp = time();
     $data = array(
         "systemID" => "10016",
@@ -53,9 +52,7 @@ function generateJsonString(string $appVersion, string $uin, string $appid = '53
             ),
             "isDebugPackage" => false,
             "customProperties" => array(
-                "appid" => $appid
-                // 发现不需要指定 appid，那就固定起来吧
-                // ⬆️无需固定，设为可选传递参数即可
+                "appid" => !is_null($appid) ? $appid : "537230561",
             )
         ),
         "taskChecksum" => "0",
