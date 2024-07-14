@@ -20,11 +20,11 @@ versions.
 send.php?uin=114514&version=9.0.70%236676%230
 ```
 
-Optional:
+    - Optional:
 
-```get
-send.php?uin=114514&version=9.0.70%236676%230&appid=537228245
-```
+    ```get
+    send.php?uin=114514&version=9.0.70%236676%230&appid=537228245
+    ```
 
 - `uin`: A QQ account number e.g: `114514`
 - `version`: Current version information (requires url encoding) e.g: `9.0.70%236676%230`
