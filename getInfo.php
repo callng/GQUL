@@ -278,7 +278,7 @@ try {
     }
 } catch (RedisException $e) {
     $result = [
-        'error' => 'Redis error：'.$e->getMessage()
+        'error' => 'Redis error：' . $e->getMessage()
     ];
     exit(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 }
@@ -302,7 +302,7 @@ try {
     $redis->set($apkUrlBase64, $result, 86400 * 30 * 12);
 } catch (RedisException $e) {
     $result = [
-        'error' => 'Redis error：'.$e->getMessage()
+        'error' => 'Redis error：' . $e->getMessage()
     ];
     exit(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 }

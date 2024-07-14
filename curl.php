@@ -31,5 +31,6 @@ function getParameters(): false|array
             return false;
         }
     }
+    $result['appid'] = !empty($_GET['appid']) ? $_GET['appid'] : null;
     return $result;
 }
