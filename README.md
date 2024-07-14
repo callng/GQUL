@@ -12,8 +12,7 @@ versions.
 
 - Not every visit succeeds in fetching the updated data!!!
 - Actually it's not simple, Android QQ distributes the test content via uin and version, and not every uin is
-  successfully
-  fetched.
+  successfully fetched.
 - Accessed via get spliced with the correct parameters:
 
 ```get
