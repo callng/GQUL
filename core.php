@@ -7,6 +7,10 @@
  */
 function generateRandomUUID(): string
 {
+    if (!function_exists('openssl_random_pseudo_bytes')) {
+        error_log('请开启openssl扩展');
+        return false;
+    }
     $data = openssl_random_pseudo_bytes(16);
     $data[6] = chr((ord($data[6]) & 0x0f) | 0x40);
     $data[8] = chr((ord($data[8]) & 0x3f) | 0x80);

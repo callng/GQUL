@@ -1,5 +1,6 @@
 <?php
 
+// 需要提取的文件列表
 $filesToExtract = [
     'assets/appid.ini',
     'assets/jni.ini',
@@ -9,7 +10,9 @@ $filesToExtract = [
 ];
 
 /**
- * @return false|array
+ * 获取请求参数
+ *
+ * @return array|false 返回参数数组或 false 如果缺少必要参数
  */
 function getParameters(): false|array
 {
@@ -26,8 +29,10 @@ function getParameters(): false|array
 }
 
 /**
- * @param string $url
- * @return false|array
+ * 获取文件信息（MD5 和大小）
+ *
+ * @param string $url 文件的 URL
+ * @return array|false 返回文件信息数组或 false 如果失败
  */
 function getFileInfo(string $url): false|array
 {
@@ -63,9 +68,11 @@ function getFileInfo(string $url): false|array
 }
 
 /**
- * @param CurlHandle $ch
- * @param string $url
- * @param string $range
+ * 设置 cURL 选项
+ *
+ * @param CurlHandle $ch cURL 句柄
+ * @param string $url 文件的 URL
+ * @param string $range 请求范围
  */
 function setCurlOptions(CurlHandle $ch, string $url, string $range): void
 {
@@ -81,9 +88,11 @@ function setCurlOptions(CurlHandle $ch, string $url, string $range): void
 }
 
 /**
- * @param string $url
- * @param string $range
- * @return string|bool
+ * 下载数据
+ *
+ * @param string $url 文件的 URL
+ * @param string $range 请求范围
+ * @return string|bool 返回数据字符串或 false 如果失败
  */
 function downloadData(string $url, string $range): bool|string
 {
@@ -99,9 +108,11 @@ function downloadData(string $url, string $range): bool|string
 }
 
 /**
- * @param string $url
- * @param array $ranges
- * @return array
+ * 并行下载数据
+ *
+ * @param string $url 文件的 URL
+ * @param array $ranges 请求范围数组
+ * @return array 返回响应数据数组
  */
 function downloadDataParallel(string $url, array $ranges): array
 {
@@ -131,8 +142,10 @@ function downloadDataParallel(string $url, array $ranges): array
 }
 
 /**
- * @param string $url
- * @return array|false
+ * 查找中央目录结束位置
+ *
+ * @param string $url 文件的 URL
+ * @return array|false 返回中央目录结束位置信息数组或 false 如果失败
  */
 function findEndOfCentralDirectory(string $url): false|array
 {
@@ -152,8 +165,10 @@ function findEndOfCentralDirectory(string $url): false|array
 }
 
 /**
- * @param string $data
- * @return array
+ * 解析中央目录数据
+ *
+ * @param string $data 中央目录数据
+ * @return array 返回解析后的文件条目数组
  */
 function parseCentralDirectory(string $data): array
 {
@@ -183,10 +198,12 @@ function parseCentralDirectory(string $data): array
 }
 
 /**
- * @param string $centralDirectoryData
- * @param string $url
- * @param array $filesToExtract
- * @return string
+ * 提取并打印文件
+ *
+ * @param string $centralDirectoryData 中央目录数据
+ * @param string $url 文件的 URL
+ * @param array $filesToExtract 要提取的文件列表
+ * @return string 返回 JSON 格式化的文件信息
  */
 function extractAndPrintFiles(string $centralDirectoryData, string $url, array $filesToExtract): string
 {
@@ -204,7 +221,7 @@ function extractAndPrintFiles(string $centralDirectoryData, string $url, array $
     $filesInfo = [];
     foreach ($entriesToDownload as $entry) {
         $fileName = $entry['fileName'];
-        $fileData = $responses[$fileName] ?? ''; // 使用 null 合并运算符以防文件未下载
+        $fileData = $responses[$fileName] ?? '';
         if ($entry['compressionMethod'] == 8) {
             $fileContent = @gzinflate($fileData);
             if ($fileContent === false) {
@@ -215,7 +232,6 @@ function extractAndPrintFiles(string $centralDirectoryData, string $url, array $
         } else {
             continue; // 不支持的压缩方法，跳过文件
         }
-        // 处理特定文件的逻辑（如qua.ini）
         if ($fileName === 'assets/qua.ini') {
             $startingPos = strpos($fileContent, "V1_");
             if ($startingPos !== false) {
@@ -241,9 +257,11 @@ function extractAndPrintFiles(string $centralDirectoryData, string $url, array $
 }
 
 /**
- * @param int $dosTime
- * @param int $dosDate
- * @return false|int
+ * 将 DOS 时间转换为 Unix 时间戳
+ *
+ * @param int $dosTime DOS 时间
+ * @param int $dosDate DOS 日期
+ * @return int|false 返回 Unix 时间戳或 false 如果失败
  */
 function dosToUnixTime(int $dosTime, int $dosDate): false|int
 {
@@ -256,17 +274,21 @@ function dosToUnixTime(int $dosTime, int $dosDate): false|int
     return mktime($hours, $minutes, $seconds, $month, $day, $year);
 }
 
+// 设置 HTTP 响应头
 header('Content-Type: application/json');
+
+// 获取请求参数
 $param = getParameters();
 if ($param === false) {
     die('Bad Request');
 }
 $apkUrl = $param['url'];
 $apkUrlBase64 = base64_encode($apkUrl);
+
 try {
     $redis = new Redis();
     $redis->connect('127.0.0.1');
-    $password = '114514';
+    $password = '1008611';
     if (!$redis->auth($password)) {
         throw new RedisException('Redis authentication failed');
     }
@@ -282,15 +304,23 @@ try {
     ];
     exit(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 }
+
+// 查找中央目录结束位置
 $eocd = findEndOfCentralDirectory($apkUrl);
 if (!$eocd || !isset($eocd['centralDirectoryOffset'], $eocd['centralDirectorySize'])) {
     die("Failed to retrieve EOCD information.");
 }
+
+// 下载中央目录数据
 $centralDirectoryData = downloadData($apkUrl, $eocd['centralDirectoryOffset'] . '-' . ($eocd['centralDirectoryOffset'] + $eocd['centralDirectorySize'] - 1));
 if (!$centralDirectoryData) {
     die("Failed to download central directory.");
 }
+
+// 提取并打印文件
 $fileJson = extractAndPrintFiles($centralDirectoryData, $apkUrl, $filesToExtract);
+
+// 获取文件信息
 $fileInfo = getFileInfo($apkUrl);
 if ($fileInfo) {
     $fileInfo['files'] = json_decode($fileJson, true);
@@ -298,6 +328,7 @@ if ($fileInfo) {
 } else {
     $result = json_encode(json_decode($fileJson, true), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 }
+
 try {
     $redis->set($apkUrlBase64, $result, 86400 * 30 * 12);
 } catch (RedisException $e) {
@@ -306,4 +337,6 @@ try {
     ];
     exit(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 }
+
+// 输出结果
 exit($result);
