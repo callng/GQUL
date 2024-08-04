@@ -149,12 +149,12 @@ function downloadDataParallel(string $url, array $ranges): array
  */
 function findEndOfCentralDirectory(string $url): false|array
 {
-    $eocdMaxSize = 65557;
-    $data = downloadData($url, '-' . $eocdMaxSize);
+    $eocdMaxSize = 65557; // 最大可能的 EOCD 大小
+    $data = downloadData($url, '-' . $eocdMaxSize); // 从文件末尾开始下载 EOCD 数据
     if (!$data) {
         return false;
     }
-    $eocdPos = strrpos($data, "\x50\x4b\x05\x06");
+    $eocdPos = strrpos($data, "\x50\x4b\x05\x06"); // 寻找 EOCD 标记
     if ($eocdPos === false) {
         return false;
     }
@@ -222,22 +222,25 @@ function extractAndPrintFiles(string $centralDirectoryData, string $url, array $
     foreach ($entriesToDownload as $entry) {
         $fileName = $entry['fileName'];
         $fileData = $responses[$fileName] ?? '';
-        if ($entry['compressionMethod'] == 8) {
+        if ($entry['compressionMethod'] == 8) { // DEFLATE
             $fileContent = @gzinflate($fileData);
             if ($fileContent === false) {
                 continue;
             }
-        } elseif ($entry['compressionMethod'] == 0) {
+        } elseif ($entry['compressionMethod'] == 0) { // STORED
             $fileContent = $fileData;
         } else {
             continue; // 不支持的压缩方法，跳过文件
         }
-        if ($fileName === 'assets/qua.ini') {
+        if ($fileName === 'assets/qua.ini') { // 处理特殊文件
             $startingPos = strpos($fileContent, "V1_");
             if ($startingPos !== false) {
                 $fileContent = substr($fileContent, $startingPos);
             }
             $fileContent = str_replace("\n", '', $fileContent);
+        }
+        if (str_contains($fileName, 'libfekit.so')) { // 处理 libfekit.so 文件
+            $fileContent = null; // 不加载内容
         }
         $lastModified = date("Y-m-d H:i:s", dosToUnixTime($entry['lastModTime'], $entry['lastModDate']));
         $fileInfo = [
@@ -252,6 +255,7 @@ function extractAndPrintFiles(string $centralDirectoryData, string $url, array $
             $fileInfo['content'] = $fileContent;
         }
         $filesInfo[] = $fileInfo;
+        unset($fileData, $fileContent); // 释放不再需要的资源
     }
     return json_encode($filesInfo);
 }
