@@ -10,9 +10,9 @@ $filesToExtract = [
 ];
 
 /**
- * 获取请求参数
+ * 获取必要的参数
  *
- * @return array|false 返回参数数组或 false 如果缺少必要参数
+ * @return array|false 成功返回参数数组，失败返回 false
  */
 function getParameters(): false|array
 {
@@ -29,10 +29,10 @@ function getParameters(): false|array
 }
 
 /**
- * 获取文件信息（MD5 和大小）
+ * 获取文件信息
  *
  * @param string $url 文件的 URL
- * @return array|false 返回文件信息数组或 false 如果失败
+ * @return array|false 成功返回文件信息数组，失败返回 false
  */
 function getFileInfo(string $url): false|array
 {
@@ -44,7 +44,6 @@ function getFileInfo(string $url): false|array
     curl_setopt($curl, CURLOPT_MAXREDIRS, 10);
     $response = curl_exec($curl);
     if (curl_errno($curl)) {
-        echo 'Curl error: ' . curl_error($curl);
         return false;
     }
     curl_close($curl);
@@ -73,10 +72,14 @@ function getFileInfo(string $url): false|array
  * @param CurlHandle $ch cURL 句柄
  * @param string $url 文件的 URL
  * @param string $range 请求范围
+ * @param bool $isHead 是否执行 HEAD 请求
  */
-function setCurlOptions(CurlHandle $ch, string $url, string $range): void
+function setCurlOptions(CurlHandle $ch, string $url, string $range, bool $isHead = false): void
 {
     $headers = ["Range: bytes=$range"];
+    if ($isHead) {
+        curl_setopt($ch, CURLOPT_NOBODY, true);
+    }
     curl_setopt_array($ch, [
         CURLOPT_URL => $url,
         CURLOPT_HTTPHEADER => $headers,
@@ -92,17 +95,26 @@ function setCurlOptions(CurlHandle $ch, string $url, string $range): void
  *
  * @param string $url 文件的 URL
  * @param string $range 请求范围
- * @return string|bool 返回数据字符串或 false 如果失败
+ * @return int|string 返回数据字符串或 int 如果失败 0文件不存在 1下载失败
  */
-function downloadData(string $url, string $range): bool|string
+function downloadData(string $url, string $range, bool $isHead = false): int|string
 {
+    if ($isHead) {
+        $ch = curl_init();
+        setCurlOptions($ch, $url, $range, true);
+        curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if ($httpCode !== 200 && $httpCode !== 206) {
+            return 0;
+        }
+    }
     $ch = curl_init();
     setCurlOptions($ch, $url, $range);
     $data = curl_exec($ch);
     curl_close($ch);
     if ($data === false) {
-        error_log(curl_error($ch));
-        return false;
+        return 1;
     }
     return $data;
 }
@@ -145,22 +157,27 @@ function downloadDataParallel(string $url, array $ranges): array
  * 查找中央目录结束位置
  *
  * @param string $url 文件的 URL
- * @return array|false 返回中央目录结束位置信息数组或 false 如果失败
+ * @return array|int 返回中央目录结束位置信息数组或 int 如果失败 0文件不存在 1下载失败 2找不到EOCD标记 3找不到EOCD数据
  */
-function findEndOfCentralDirectory(string $url): false|array
+function findEndOfCentralDirectory(string $url): int|array
 {
-    $eocdMaxSize = 65557; // 最大可能的 EOCD 大小
-    $data = downloadData($url, '-' . $eocdMaxSize); // 从文件末尾开始下载 EOCD 数据
-    if (!$data) {
-        return false;
+    $eocdMaxSize = 65536; // 最大可能的 EOCD 大小
+    $data = downloadData($url, '-' . $eocdMaxSize, true); // 从文件末尾开始下载 EOCD 数据
+    if ($data === 0 || $data === 1) {
+        return $data;
     }
     $eocdPos = strrpos($data, "\x50\x4b\x05\x06"); // 寻找 EOCD 标记
     if ($eocdPos === false) {
-        return false;
+        return 2;
+    }
+    $size = unpack('V', substr($data, $eocdPos + 12, 4))[1];
+    $offset = unpack('V', substr($data, $eocdPos + 16, 4))[1];
+    if ($size === false || $offset === false) {
+        return 3;
     }
     return [
-        'centralDirectorySize' => unpack('V', substr($data, $eocdPos + 12, 4))[1],
-        'centralDirectoryOffset' => unpack('V', substr($data, $eocdPos + 16, 4))[1]
+        'centralDirectorySize' => $size,
+        'centralDirectoryOffset' => $offset
     ];
 }
 
@@ -198,12 +215,30 @@ function parseCentralDirectory(string $data): array
 }
 
 /**
- * 提取并打印文件
+ * DOS 时间转换为 Unix 时间戳
+ *
+ * @param int $dosTime DOS 时间
+ * @param int $dosDate DOS 日期
+ * @return false|int 成功返回 Unix 时间戳，失败返回 false
+ */
+function dosToUnixTime(int $dosTime, int $dosDate): false|int
+{
+    $seconds = ($dosTime & 0x1F) * 2;
+    $minutes = ($dosTime >> 5) & 0x3F;
+    $hours = ($dosTime >> 11) & 0x1F;
+    $day = $dosDate & 0x1F;
+    $month = ($dosDate >> 5) & 0x0F;
+    $year = (($dosDate >> 9) & 0x7F) + 1980;
+    return mktime($hours, $minutes, $seconds, $month, $day, $year);
+}
+
+/**
+ * 提取并打印文件信息
  *
  * @param string $centralDirectoryData 中央目录数据
  * @param string $url 文件的 URL
- * @param array $filesToExtract 要提取的文件列表
- * @return string 返回 JSON 格式化的文件信息
+ * @param array $filesToExtract 需要提取的文件列表
+ * @return string 返回 JSON 编码的文件信息
  */
 function extractAndPrintFiles(string $centralDirectoryData, string $url, array $filesToExtract): string
 {
@@ -238,6 +273,9 @@ function extractAndPrintFiles(string $centralDirectoryData, string $url, array $
                 $fileContent = substr($fileContent, $startingPos);
             }
             $fileContent = str_replace("\n", '', $fileContent);
+            if (str_ends_with($fileContent, '_')) {
+                $fileContent = substr($fileContent, 0, -1);
+            }
         }
         if (str_contains($fileName, 'libfekit.so')) { // 处理 libfekit.so 文件
             $fileContent = null; // 不加载内容
@@ -257,34 +295,17 @@ function extractAndPrintFiles(string $centralDirectoryData, string $url, array $
         $filesInfo[] = $fileInfo;
         unset($fileData, $fileContent); // 释放不再需要的资源
     }
-    return json_encode($filesInfo);
+    return json_encode($filesInfo, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 }
 
-/**
- * 将 DOS 时间转换为 Unix 时间戳
- *
- * @param int $dosTime DOS 时间
- * @param int $dosDate DOS 日期
- * @return int|false 返回 Unix 时间戳或 false 如果失败
- */
-function dosToUnixTime(int $dosTime, int $dosDate): false|int
-{
-    $seconds = ($dosTime & 0x1F) * 2;
-    $minutes = ($dosTime >> 5) & 0x3F;
-    $hours = ($dosTime >> 11) & 0x1F;
-    $day = $dosDate & 0x1F;
-    $month = ($dosDate >> 5) & 0x0F;
-    $year = (($dosDate >> 9) & 0x7F) + 1980;
-    return mktime($hours, $minutes, $seconds, $month, $day, $year);
-}
-
-// 设置 HTTP 响应头
 header('Content-Type: application/json');
 
-// 获取请求参数
 $param = getParameters();
 if ($param === false) {
-    die('Bad Request');
+    $result = [
+        'error' => 'Bad Request'
+    ];
+    exit(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 }
 $apkUrl = $param['url'];
 $apkUrlBase64 = base64_encode($apkUrl);
@@ -309,22 +330,39 @@ try {
     exit(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 }
 
-// 查找中央目录结束位置
 $eocd = findEndOfCentralDirectory($apkUrl);
-if (!$eocd || !isset($eocd['centralDirectoryOffset'], $eocd['centralDirectorySize'])) {
-    die("Failed to retrieve EOCD information.");
+if ($eocd === 0) {
+    $result = [
+        'error' => 'File not found'
+    ];
+    exit(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+} elseif ($eocd === 1) {
+    $result = [
+        'error' => 'Download data failed'
+    ];
+    exit(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+} elseif ($eocd === 2) {
+    $result = [
+        'error' => 'EOCD markers not found'
+    ];
+    exit(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+} elseif ($eocd === 3) {
+    $result = [
+        'error' => 'Failed to retrieve EOCD information'
+    ];
+    exit(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 }
 
-// 下载中央目录数据
 $centralDirectoryData = downloadData($apkUrl, $eocd['centralDirectoryOffset'] . '-' . ($eocd['centralDirectoryOffset'] + $eocd['centralDirectorySize'] - 1));
-if (!$centralDirectoryData) {
-    die("Failed to download central directory.");
+if ($centralDirectoryData === 1) {
+    $result = [
+        'error' => 'Download data failed'
+    ];
+    exit(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 }
 
-// 提取并打印文件
 $fileJson = extractAndPrintFiles($centralDirectoryData, $apkUrl, $filesToExtract);
 
-// 获取文件信息
 $fileInfo = getFileInfo($apkUrl);
 if ($fileInfo) {
     $fileInfo['files'] = json_decode($fileJson, true);
@@ -334,7 +372,7 @@ if ($fileInfo) {
 }
 
 try {
-    $redis->set($apkUrlBase64, $result, 86400 * 30 * 12);
+    $redis->set($apkUrlBase64, $result);
 } catch (RedisException $e) {
     $result = [
         'error' => 'Redis error：' . $e->getMessage()
@@ -342,5 +380,4 @@ try {
     exit(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 }
 
-// 输出结果
 exit($result);
