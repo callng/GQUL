@@ -1,44 +1,41 @@
-# GQUL - Get QQ Update Link
+# GQUL - 获取QQ更新链接
 
-**GQUL** is a PHP-based tool designed to fetch update links for various Android QQ versions, including LiteGray testing
-versions.
+**GQUL** 是一个基于PHP的工具，设计用于获取各种Android版QQ的不同版本更新链接，包括LiteGray测试版本。
 
-## Features
+## 特性
 
-- Retrieve Android QQ update links for different versions.
-- Supports LiteGray testing versions.
+- 检索不同版本的Android QQ更新链接。
+- 支持LiteGray测试版本。
 
-## Usage
+## 使用方法
 
-- Not every visit succeeds in fetching the updated data!!!
-- Actually it's not simple, Android QQ distributes the test content via uin and version, and not every uin is
-  successfully fetched.
-- Accessed via get spliced with the correct parameters:
+- 并非每次访问都能成功获取更新数据！
+- 实际上，Android QQ是通过uin和版本号分发测试内容的，并非每个uin都能成功获取到信息。
+- 访问时需要正确拼接参数：
 
 ```get
 send.php?uin=114514&version=9.0.70%236676%230
 ```
 
-- Optional:
+- 可选参数
 
 ```get
 send.php?uin=114514&version=9.0.70%236676%230&appid=537228245
 ```
 
-- `uin`: A QQ account number e.g: `114514`
-- `version`: Current version information (requires url encoding) e.g: `9.0.70%236676%230`
-- `appid`(optional, the default content is `537230561`): The appid used by the current QQ version e.g: `537228245`
+- `uin`: QQ账号号码，例如: `114514`
+- `version`: 当前版本信息（需要URL编码），例如: `9.0.70%236676%230`
+- `appid`(可选，默认内容为 `537230561`): 当前QQ版本使用的appid，例如: `537228245`
 
-## Principle
+## 原理
 
-Android QQ uses [Tencent Device-oriented Service (TDS) Shiply Distribution Platform](https://shiply.tds.qq.com/) to
-distribute update packages based on pre-defined QQ numbers and configuration libraries. This project simulates the
-construction of the data requested by Android QQ to Shiply Platform and expects to get the response from Shiply Platform
-with the download link of the update installation package.
+QQ 使用 [腾讯面向设备的服务(TDS) Shiply分发平台](https://shiply.tds.qq.com/) 根据预定义的QQ号码和配置库来分发更新包
 
-## Files
+本项目模拟构建QQ向Shiply平台请求的数据，并期望从Shiply平台获得响应，其中包含更新安装包的下载链接
 
-- `core.php`: Core functionalities.
-- `curl.php`: CURL operations.
-- `send.php`: Main script to fetch the update link.
-- `util.php`: Utility functions.
+## 项目文件
+
+- `core.php`: 核心功能。
+- `curl.php`: CURL操作。
+- `send.php`: 主脚本以获取更新链接。
+- `util.php`: 辅助函数。
