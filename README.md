@@ -37,7 +37,7 @@ Android QQ 使用 [TDS 腾讯端服务 Shiply 发布平台](https://shiply.tds.q
 
 ## 项目文件
 
-- `core.php`: 核心功能。
-- `curl.php`: cURL 操作。
-- `send.php`: 获取更新链接的主脚本。
-- `util.php`: 辅助函数。
+- `core.php`：核心功能。
+- `curl.php`：cURL 操作。
+- `send.php`：获取更新链接的主脚本。
+- `util.php`：辅助函数。
