@@ -1,5 +1,7 @@
 # GQUL - 获取 QQ 更新链接
 
+[English](README_EN.md)
+
 **GQUL** 是一个基于 PHP 的工具，可用于获取 Android QQ 的更新链接，包括 LiteGray 小范围灰度测试版本。
 
 ## 特性
