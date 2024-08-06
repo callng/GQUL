@@ -1,5 +1,7 @@
 # GQUL - Get QQ Update Link
 
+[简体中文](README.md) | English
+
 **GQUL** is a PHP-based tool designed to fetch update links for various Android QQ versions, including LiteGray testing
 versions.
 
