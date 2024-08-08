@@ -205,33 +205,34 @@ function parseCentralDirectory(string $data, array $filesToExtract): array
         $fileName = substr($data, $offset + 46, $fileNameLength);
 
         // 判断文件是否需要解析
-        if (!in_array($fileName, $filesToExtract)) {
-            // 计算下一个文件条目的偏移量
-            $nextEntryOffset = 46 + $fileNameLength + unpack('v', substr($data, $offset + 30, 2))[1] + unpack('v', substr($data, $offset + 32, 2))[1];
-            $offset += $nextEntryOffset;
-            continue;
+        if (in_array($fileName, $filesToExtract)) {
+            // 解析文件数据
+            $entry = [
+                'compressionMethod' => unpack('v', substr($data, $offset + 10, 2))[1],
+                'lastModTime' => unpack('v', substr($data, $offset + 12, 2))[1],
+                'lastModDate' => unpack('v', substr($data, $offset + 14, 2))[1],
+                'crc32' => unpack('V', substr($data, $offset + 16, 4))[1],
+                'compressedSize' => unpack('V', substr($data, $offset + 20, 4))[1],
+                'uncompressedSize' => unpack('V', substr($data, $offset + 24, 4))[1],
+                'fileNameLength' => $fileNameLength,
+                'extraFieldLength' => unpack('v', substr($data, $offset + 30, 2))[1],
+                'fileCommentLength' => unpack('v', substr($data, $offset + 32, 2))[1],
+                'fileHeaderOffset' => unpack('V', substr($data, $offset + 42, 4))[1],
+                'fileName' => $fileName
+            ];
+
+            // 保存解析的数据
+            $entries[$entry['fileName']] = $entry;
+
+            // 添加到已找到的文件列表
+            $foundFiles[] = $fileName;
+            if (count($foundFiles) === count($filesToExtract)) { // 判断是否找到所有需要的文件
+                break;
+            }
         }
 
-        // 解析文件数据
-        $entry = [
-            'compressionMethod' => unpack('v', substr($data, $offset + 10, 2))[1],
-            'lastModTime' => unpack('v', substr($data, $offset + 12, 2))[1],
-            'lastModDate' => unpack('v', substr($data, $offset + 14, 2))[1],
-            'crc32' => unpack('V', substr($data, $offset + 16, 4))[1],
-            'compressedSize' => unpack('V', substr($data, $offset + 20, 4))[1],
-            'uncompressedSize' => unpack('V', substr($data, $offset + 24, 4))[1],
-            'fileNameLength' => $fileNameLength,
-            'extraFieldLength' => unpack('v', substr($data, $offset + 30, 2))[1],
-            'fileCommentLength' => unpack('v', substr($data, $offset + 32, 2))[1],
-            'fileHeaderOffset' => unpack('V', substr($data, $offset + 42, 4))[1],
-            'fileName' => $fileName
-        ];
-
-        // 保存解析的数据
-        $entries[$entry['fileName']] = $entry;
-
         // 计算下一个文件条目的偏移量
-        $nextEntryOffset = 46 + $entry['fileNameLength'] + $entry['extraFieldLength'] + $entry['fileCommentLength'];
+        $nextEntryOffset = 46 + $fileNameLength + unpack('v', substr($data, $offset + 30, 2))[1] + unpack('v', substr($data, $offset + 32, 2))[1];
         $offset += $nextEntryOffset;
     }
     return $entries;
@@ -271,10 +272,9 @@ function extractAndPrintFiles(string $centralDirectoryData, string $url, array $
         $fileDataOffset = $entry['fileHeaderOffset'] + 30 + $entry['fileNameLength'] + $entry['extraFieldLength'];
         $fileDataRange = $fileDataOffset . '-' . ($fileDataOffset + $entry['compressedSize'] - 1);
         // 判断是否是.so文件
-        if (str_ends_with($entry['fileName'], '.so')) {
-            continue;
+        if (!str_ends_with($entry['fileName'], '.so')) {
+            $ranges[$entry['fileName']] = $fileDataRange;
         }
-        $ranges[$entry['fileName']] = $fileDataRange;
     }
     $responses = downloadDataParallel($url, $ranges);
     $filesInfo = [];
@@ -307,6 +307,9 @@ function extractAndPrintFiles(string $centralDirectoryData, string $url, array $
         }
         $lastModified = date("Y-m-d H:i:s", dosToUnixTime($entry['lastModTime'], $entry['lastModDate']));
         $fileInfo = [
+            'compressionType' => $entry['compressionMethod'],
+            'compressionSize' => $entry['compressedSize'],
+            'decompressionSize' => $entry['uncompressedSize'],
             'fileName' => substr($fileName, strrpos($fileName, '/') + 1),
             'crc32' => sprintf("%08x", $entry['crc32']),
             'lastModified' => ($lastModified === '1979-11-30 00:00:00') ? null : $lastModified
