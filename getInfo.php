@@ -25,6 +25,7 @@ function getParameters(): false|array
             return false;
         }
     }
+    $result['check'] = !empty($_GET['check']) ? $_GET['check'] : 'yes';
     return $result;
 }
 
@@ -170,8 +171,8 @@ function findEndOfCentralDirectory(string $url): int|array
     if ($eocdPos === false) {
         return 2;
     }
-    $size = unpack('V', substr($data, $eocdPos + 12, 4))[1];
-    $offset = unpack('V', substr($data, $eocdPos + 16, 4))[1];
+    $size = unpack('V', substr($data, $eocdPos + 12, 4))[1]; // 解析中央目录大小
+    $offset = unpack('V', substr($data, $eocdPos + 16, 4))[1]; // 解析中央目录偏移量
     if ($size === false || $offset === false) {
         return 3;
     }
@@ -185,16 +186,33 @@ function findEndOfCentralDirectory(string $url): int|array
  * 解析中央目录数据
  *
  * @param string $data 中央目录数据
+ * @param array $filesToExtract 需要解析的文件列表
  * @return array 返回解析后的文件条目数组
  */
-function parseCentralDirectory(string $data): array
+function parseCentralDirectory(string $data, array $filesToExtract): array
 {
     $entries = [];
     $offset = 0;
     while ($offset + 4 < strlen($data)) {
+        // 是否解析符合要求
         if (unpack('V', substr($data, $offset, 4))[1] !== 0x02014b50) {
             break;
         }
+        // 获取文件名长度
+        $fileNameLength = unpack('v', substr($data, $offset + 28, 2))[1];
+
+        // 获取文件名
+        $fileName = substr($data, $offset + 46, $fileNameLength);
+
+        // 判断文件是否需要解析
+        if (!in_array($fileName, $filesToExtract)) {
+            // 计算下一个文件条目的偏移量
+            $nextEntryOffset = 46 + $fileNameLength + unpack('v', substr($data, $offset + 30, 2))[1] + unpack('v', substr($data, $offset + 32, 2))[1];
+            $offset += $nextEntryOffset;
+            continue;
+        }
+
+        // 解析文件数据
         $entry = [
             'compressionMethod' => unpack('v', substr($data, $offset + 10, 2))[1],
             'lastModTime' => unpack('v', substr($data, $offset + 12, 2))[1],
@@ -202,14 +220,19 @@ function parseCentralDirectory(string $data): array
             'crc32' => unpack('V', substr($data, $offset + 16, 4))[1],
             'compressedSize' => unpack('V', substr($data, $offset + 20, 4))[1],
             'uncompressedSize' => unpack('V', substr($data, $offset + 24, 4))[1],
-            'fileNameLength' => unpack('v', substr($data, $offset + 28, 2))[1],
+            'fileNameLength' => $fileNameLength,
             'extraFieldLength' => unpack('v', substr($data, $offset + 30, 2))[1],
             'fileCommentLength' => unpack('v', substr($data, $offset + 32, 2))[1],
             'fileHeaderOffset' => unpack('V', substr($data, $offset + 42, 4))[1],
-            'fileName' => substr($data, $offset + 46, unpack('v', substr($data, $offset + 28, 2))[1])
+            'fileName' => $fileName
         ];
+
+        // 保存解析的数据
         $entries[$entry['fileName']] = $entry;
-        $offset += 46 + $entry['fileNameLength'] + $entry['extraFieldLength'] + $entry['fileCommentLength'];
+
+        // 计算下一个文件条目的偏移量
+        $nextEntryOffset = 46 + $entry['fileNameLength'] + $entry['extraFieldLength'] + $entry['fileCommentLength'];
+        $offset += $nextEntryOffset;
     }
     return $entries;
 }
@@ -242,30 +265,35 @@ function dosToUnixTime(int $dosTime, int $dosDate): false|int
  */
 function extractAndPrintFiles(string $centralDirectoryData, string $url, array $filesToExtract): string
 {
-    $entries = parseCentralDirectory($centralDirectoryData);
-    $entriesToDownload = array_filter($entries, function ($entry) use ($filesToExtract) {
-        return in_array($entry['fileName'], $filesToExtract);
-    });
+    $entries = parseCentralDirectory($centralDirectoryData, $filesToExtract);
     $ranges = [];
-    foreach ($entriesToDownload as $entry) {
+    foreach ($entries as $entry) {
         $fileDataOffset = $entry['fileHeaderOffset'] + 30 + $entry['fileNameLength'] + $entry['extraFieldLength'];
         $fileDataRange = $fileDataOffset . '-' . ($fileDataOffset + $entry['compressedSize'] - 1);
+        // 判断是否是.so文件
+        if (str_ends_with($entry['fileName'], '.so')) {
+            continue;
+        }
         $ranges[$entry['fileName']] = $fileDataRange;
     }
     $responses = downloadDataParallel($url, $ranges);
     $filesInfo = [];
-    foreach ($entriesToDownload as $entry) {
+    foreach ($entries as $entry) {
         $fileName = $entry['fileName'];
         $fileData = $responses[$fileName] ?? '';
-        if ($entry['compressionMethod'] == 8) { // DEFLATE
-            $fileContent = @gzinflate($fileData);
-            if ($fileContent === false) {
-                continue;
-            }
-        } elseif ($entry['compressionMethod'] == 0) { // STORED
-            $fileContent = $fileData;
+        if ($fileData === '') {
+            $fileContent = null;
         } else {
-            continue; // 不支持的压缩方法，跳过文件
+            if ($entry['compressionMethod'] == 8) { // DEFLATE
+                $fileContent = @gzinflate($fileData);
+                if ($fileContent === false) {
+                    continue;
+                }
+            } elseif ($entry['compressionMethod'] == 0) { // STORED
+                $fileContent = $fileData;
+            } else {
+                continue; // 不支持的压缩方法，跳过文件
+            }
         }
         if ($fileName === 'assets/qua.ini') { // 处理特殊文件
             $startingPos = strpos($fileContent, "V1_");
@@ -277,19 +305,16 @@ function extractAndPrintFiles(string $centralDirectoryData, string $url, array $
                 $fileContent = substr($fileContent, 0, -1);
             }
         }
-        if (str_contains($fileName, 'libfekit.so')) { // 处理 libfekit.so 文件
-            $fileContent = null; // 不加载内容
-        }
         $lastModified = date("Y-m-d H:i:s", dosToUnixTime($entry['lastModTime'], $entry['lastModDate']));
         $fileInfo = [
             'fileName' => substr($fileName, strrpos($fileName, '/') + 1),
             'crc32' => sprintf("%08x", $entry['crc32']),
             'lastModified' => ($lastModified === '1979-11-30 00:00:00') ? null : $lastModified
         ];
-        if (str_contains($fileName, 'libfekit.so')) {
+        if (str_ends_with($fileName, '.so')) {
             $fileInfo['sizeMB'] = number_format($entry['uncompressedSize'] / (1024 * 1024), 2);
         }
-        if (!strpos($entry['fileName'], '.so')) {
+        if (!str_ends_with($entry['fileName'], '.so')) {
             $fileInfo['content'] = $fileContent;
         }
         $filesInfo[] = $fileInfo;
@@ -318,7 +343,7 @@ try {
         throw new RedisException('Redis authentication failed');
     }
     $redis->select(7);
-    if ($redis->exists($apkUrlBase64)) {
+    if ($redis->exists($apkUrlBase64) && $param['check'] === 'yes') {
         $result = $redis->get($apkUrlBase64);
         $redis->close();
         exit($result);
@@ -330,7 +355,7 @@ try {
     exit(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 }
 
-$eocd = findEndOfCentralDirectory($apkUrl);
+$eocd = findEndOfCentralDirectory($apkUrl); // 查找 EOCD
 if ($eocd === 0) {
     $result = [
         'error' => 'File not found'
@@ -353,7 +378,7 @@ if ($eocd === 0) {
     exit(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 }
 
-$centralDirectoryData = downloadData($apkUrl, $eocd['centralDirectoryOffset'] . '-' . ($eocd['centralDirectoryOffset'] + $eocd['centralDirectorySize'] - 1));
+$centralDirectoryData = downloadData($apkUrl, $eocd['centralDirectoryOffset'] . '-' . ($eocd['centralDirectoryOffset'] + $eocd['centralDirectorySize'] - 1)); // 获取中央目录数据
 if ($centralDirectoryData === 1) {
     $result = [
         'error' => 'Download data failed'
@@ -361,18 +386,19 @@ if ($centralDirectoryData === 1) {
     exit(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 }
 
-$fileJson = extractAndPrintFiles($centralDirectoryData, $apkUrl, $filesToExtract);
+$fileJson = extractAndPrintFiles($centralDirectoryData, $apkUrl, $filesToExtract); // 提取文件信息
 
-$fileInfo = getFileInfo($apkUrl);
+$fileInfo = getFileInfo($apkUrl); // 获取文件总大小和MD5
+
 if ($fileInfo) {
-    $fileInfo['files'] = json_decode($fileJson, true);
+    $fileInfo['files'] = json_decode($fileJson, true); // 合并文件信息
     $result = json_encode($fileInfo, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 } else {
     $result = json_encode(json_decode($fileJson, true), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 }
 
 try {
-    $redis->set($apkUrlBase64, $result);
+    $redis->set($apkUrlBase64, $result); // 缓存结果
 } catch (RedisException $e) {
     $result = [
         'error' => 'Redis error：' . $e->getMessage()
@@ -380,4 +406,4 @@ try {
     exit(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 }
 
-exit($result);
+exit($result); // 输出结果
