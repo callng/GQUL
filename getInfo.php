@@ -162,7 +162,7 @@ function downloadDataParallel(string $url, array $ranges): array
  */
 function findEndOfCentralDirectory(string $url): int|array
 {
-    $eocdMaxSize = 65536; // 最大可能的 EOCD 大小
+    $eocdMaxSize = 22; // 从末尾往前找 EOCD 数据的最大长度
     $data = downloadData($url, '-' . $eocdMaxSize, true); // 从文件末尾开始下载 EOCD 数据
     if ($data === 0 || $data === 1) {
         return $data;
@@ -171,12 +171,14 @@ function findEndOfCentralDirectory(string $url): int|array
     if ($eocdPos === false) {
         return 2;
     }
-    $size = unpack('V', substr($data, $eocdPos + 12, 4))[1]; // 解析中央目录大小
-    $offset = unpack('V', substr($data, $eocdPos + 16, 4))[1]; // 解析中央目录偏移量
-    if ($size === false || $offset === false) {
+    $totalNum = unpack('v', substr($data, $eocdPos + 10, 2))[1]; // 解析总文件数
+    $size = unpack('V', substr($data, $eocdPos + 12, 4))[1]; // 中央目录的总大小
+    $offset = unpack('V', substr($data, $eocdPos + 16, 4))[1]; // 中央目录相对于ZIP文件第一个entry的起始位置
+    if ($size === false || $offset === false || $totalNum === false) {
         return 3;
     }
     return [
+        'totalNum' => $totalNum,
         'centralDirectorySize' => $size,
         'centralDirectoryOffset' => $offset
     ];
@@ -371,7 +373,7 @@ if ($eocd === 0) {
     exit(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 } elseif ($eocd === 2) {
     $result = [
-        'error' => 'EOCD markers not found'
+        'error' => 'Not a zip file'
     ];
     exit(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 } elseif ($eocd === 3) {
@@ -394,10 +396,11 @@ $fileJson = extractAndPrintFiles($centralDirectoryData, $apkUrl, $filesToExtract
 $fileInfo = getFileInfo($apkUrl); // 获取文件总大小和MD5
 
 if ($fileInfo) {
+    $fileInfo['totalNum'] = $eocd['totalNum'];
     $fileInfo['files'] = json_decode($fileJson, true); // 合并文件信息
     $result = json_encode($fileInfo, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 } else {
-    $result = json_encode(json_decode($fileJson, true), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    $result = json_encode($fileJson, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 }
 
 try {
