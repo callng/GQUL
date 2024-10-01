@@ -31,7 +31,7 @@ send.php?uin=114514&version=9.0.70%236676%230&appid=537228245
 
 ## 原理
 
-Android QQ 使用 [TDS 腾讯端服务 Shiply 发布平台](https://shiply.tds.qq.com/) 根据预设的 QQ 号及其配置库来分发更新包。
+Android QQ 使用 [TDS 腾讯端服务 Shiply 容器与发布平台](https://shiply.tds.qq.com/) 根据预设的 QQ 号及其配置库来分发更新包。
 
 此项目通过模拟构建 Android QQ 向 Shiply 平台请求的数据以期望获得 Shiply 发布平台带有更新安装包下载链接的响应返回。
 
