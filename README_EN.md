@@ -33,7 +33,7 @@ send.php?uin=114514&version=9.0.70%236676%230&appid=537228245
 
 ## Principle
 
-Android QQ uses [Tencent Device-oriented Service (TDS) Shiply Distribution Platform](https://shiply.tds.qq.com/) to
+Android QQ uses [Tencent Device-oriented Service (TDS) Shiply Containing and Distributing Platform](https://shiply.tds.qq.com/) to
 distribute update packages based on pre-defined QQ numbers and configuration libraries. This project simulates the
 construction of the data requested by Android QQ to Shiply Platform and expects to get the response from Shiply Platform
 with the download link of the update installation package.
