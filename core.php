@@ -28,16 +28,20 @@ function generateRandomUUID(): string
  * 生成加密前的 JSON 字符串
  *
  * @param string $appVersion 应用版本号
- * @param string $uin QQ号
+ * @param string $uin QQ 号
+ * @param string $targetApp 目标应用
  * @return string 返回生成的 JSON 字符串
  */
-function generateJsonString(string $appVersion, string $uin, string $appid = null): string
+function generateJsonString(string $appVersion, string $uin, string $appid = null, string $targetApp = 'QQ'): string
 {
     $timestamp = time();
+    $appID = $targetApp == "TIM" || $targetApp == "tim" || $targetApp == "Tim" ? "ad6b501b0e" : "4cd6974be1";
+    $signID = $targetApp == "TIM" || $targetApp == "tim" || $targetApp == "Tim" ? "33641818-aee7-445a-82d4-b7d0bce3a85a" : "0ccc46ca-154c-4c6b-8b0b-4d8537ffcbcc";
+    $bundleId = $targetApp == "TIM" || $targetApp == "tim" || $targetApp == "Tim" ? "com.tencent.tim" : "com.tencent.mobileqq";
     $data = array(
         "systemID" => "10016",
-        "appID" => "4cd6974be1",
-        "sign" => md5('10016$4cd6974be1$4$$' . $timestamp . '$' . $uin . '$rdelivery0ccc46ca-154c-4c6b-8b0b-4d8537ffcbcc'),
+        "appID" => $appID,
+        "sign" => md5('10016$4cd6974be1$4$$' . $timestamp . '$' . $uin . '$rdelivery' . $signID),
         "timestamp" => $timestamp,
         "pullType" => 4,
         "target" => 1,
@@ -45,12 +49,12 @@ function generateJsonString(string $appVersion, string $uin, string $appid = nul
             "properties" => array(
                 "platform" => 2,
                 "language" => "zh",
-                "sdkVersion" => "1.3.35-RC03",
+                "sdkVersion" => "1.3.36-RC01",
                 "guid" => $uin,
                 "appVersion" => $appVersion,
                 "osVersion" => "34",
                 "is64Bit" => true,
-                "bundleId" => "com.tencent.mobileqq",
+                "bundleId" => $bundleId,
                 "uniqueId" => generateRandomUUID(),
                 "model" => "2304FPN6DC"
             ),

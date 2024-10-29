@@ -32,5 +32,6 @@ function getParameters(): false|array
         }
     }
     $result['appid'] = !empty($_GET['appid']) ? $_GET['appid'] : null;
+    $result['targetApp'] = !empty($_GET['targetApp']) ? $_GET['targetApp'] : 'QQ';
     return $result;
 }
