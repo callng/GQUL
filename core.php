@@ -35,9 +35,10 @@ function generateRandomUUID(): string
 function generateJsonString(string $appVersion, string $uin, string $appid = null, string $targetApp = 'QQ'): string
 {
     $timestamp = time();
-    $appID = $targetApp == "TIM" || $targetApp == "tim" || $targetApp == "Tim" ? "ad6b501b0e" : "4cd6974be1";
-    $signID = $targetApp == "TIM" || $targetApp == "tim" || $targetApp == "Tim" ? "33641818-aee7-445a-82d4-b7d0bce3a85a" : "0ccc46ca-154c-4c6b-8b0b-4d8537ffcbcc";
-    $bundleId = $targetApp == "TIM" || $targetApp == "tim" || $targetApp == "Tim" ? "com.tencent.tim" : "com.tencent.mobileqq";
+    $isTim = strcasecmp($targetApp, "TIM") == 0;
+    $appID = $isTim ? "ad6b501b0e" : "4cd6974be1";
+    $signID = $isTim ? "33641818-aee7-445a-82d4-b7d0bce3a85a" : "0ccc46ca-154c-4c6b-8b0b-4d8537ffcbcc";
+    $bundleId = $isTim ? "com.tencent.tim" : "com.tencent.mobileqq";
     $data = array(
         "systemID" => "10016",
         "appID" => $appID,

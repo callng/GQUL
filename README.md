@@ -29,7 +29,7 @@ send.php?uin=114514&version=9.0.70%236676%230&appid=537228245&targetApp=TIM
 - `uin`：QQ 号，例如 `114514`
 - `version`：当前版本信息（需要 URL 编码），例如 `9.0.70%236676%230`
 - `appid`（可选，默认内容为 `537230561`）：当前 QQ 版本的 appid，例如 `537228245`
-- `targetApp`（可选）：选择目标应用。当且仅当 `targetApp` 参数值为 `TIM` 或 `Tim` 或 `tim` 时，请求目标应用为 TIM，否则请求目标应用为 QQ。
+- `targetApp`（可选）：选择目标应用。当且仅当 `targetApp` 参数值为 `TIM` 时，请求目标应用为 TIM，否则请求目标应用为 `QQ`。
 
 ## 原理
 
