@@ -29,10 +29,11 @@ function generateRandomUUID(): string
  *
  * @param string $appVersion 应用版本号
  * @param string $uin QQ 号
+ * @param string|null $appid
  * @param string $targetApp 目标应用
  * @return string 返回生成的 JSON 字符串
  */
-function generateJsonString(string $appVersion, string $uin, string $appid = null, string $targetApp = 'QQ'): string
+function generateJsonString(string $appVersion, string $uin, ?string $appid = null, string $targetApp = 'QQ'): string
 {
     $timestamp = time();
     $isTim = strcasecmp($targetApp, "TIM") == 0;
