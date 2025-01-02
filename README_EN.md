@@ -18,17 +18,21 @@
 - Accessed via get spliced with the correct parameters:
 
 ```get
-send.php?uin=114514&version=9.0.70%236676%230
+send.php?uin=114514&version=9.0.70
 ```
 
 - Optional:
 
 ```get
-send.php?uin=114514&version=9.0.70%236676%230&appid=537228245&targetApp=TIM
+send.php?uin=114514&version=9.0.70%236676%230&appid=537228245
+```
+
+```get
+send.php?uin=114514&version=4.0.95%234008&appid=537249218&targetApp=TIM
 ```
 
 - `uin`: A QQ account number e.g: `114514`
-- `version`: Current version information (requires url encoding) e.g: `9.0.70%236676%230`
+- `version`: Current version information (requires url encoding) e.g: `9.0.70%236676%230` (before encoding is `9.0.70#676#0`)
 - `appid`(optional, the default content is `537230561`): The appid used by the current QQ version e.g: `537228245`
 - `targetApp`(optional): Select the target application. The request target application is TIM if and only if the value of the `targetApp` parameter is `TIM`. Otherwise, the request target application is `QQ`.
 

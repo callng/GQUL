@@ -1,4 +1,11 @@
 <?php
+const SHIPLY_DEFAULT_SDK_VERSION = "1.3.36-RC03";
+const SHIPLY_APPID_QQ = "4cd6974be1";
+const SHIPLY_APPID_TIM = "ad6b501b0e";
+const SHIPLY_SIGN_ID_QQ = "0ccc46ca-154c-4c6b-8b0b-4d8537ffcbcc";
+const SHIPLY_SIGN_ID_TIM = "33641818-aee7-445a-82d4-b7d0bce3a85a";
+const SHIPLPACKAGE_NAME_QQ = "com.tencent.mobileqq";
+const SHIPLPACKAGE_NAME_TIM = "com.tencent.tim";
 
 /**
  * 生成一个随机的UUID
@@ -27,23 +34,23 @@ function generateRandomUUID(): string
 /**
  * 生成加密前的 JSON 字符串
  *
- * @param string $appVersion 应用版本号
+ * @param string $appVersion Android QQ 版本号，如 9.1.30#22140
  * @param string $uin QQ 号
- * @param string|null $appid
- * @param string $targetApp 目标应用
+ * @param string|null $appid Android QQ 版本 Channel ID，如 `537230561`
+ * @param string $targetApp 目标应用，默认为“QQ”，可选“TIM”
  * @return string 返回生成的 JSON 字符串
  */
-function generateJsonString(string $appVersion, string $uin, ?string $appid = null, string $targetApp = 'QQ'): string
+function generateJsonString(string $appVersion, string $uin, ?string $appid = null, string $targetApp = 'TIM'): string
 {
     $timestamp = time();
     $isTim = strcasecmp($targetApp, "TIM") == 0;
-    $appID = $isTim ? "ad6b501b0e" : "4cd6974be1";
-    $signID = $isTim ? "33641818-aee7-445a-82d4-b7d0bce3a85a" : "0ccc46ca-154c-4c6b-8b0b-4d8537ffcbcc";
-    $bundleId = $isTim ? "com.tencent.tim" : "com.tencent.mobileqq";
+    $appID = $isTim ? SHIPLY_APPID_TIM : SHIPLY_APPID_QQ;
+    $signID = $isTim ? SHIPLY_SIGN_ID_TIM : SHIPLY_SIGN_ID_QQ;
+    $bundleId = $isTim ? SHIPLPACKAGE_NAME_TIM : SHIPLPACKAGE_NAME_QQ;
     $data = array(
         "systemID" => "10016",
         "appID" => $appID,
-        "sign" => md5('10016$4cd6974be1$4$$' . $timestamp . '$' . $uin . '$rdelivery' . $signID),
+        "sign" => md5('10016$' . $appID . '$4$$' . $timestamp . '$' . $uin . '$rdelivery' . $signID),
         "timestamp" => $timestamp,
         "pullType" => 4,
         "target" => 1,
@@ -51,10 +58,10 @@ function generateJsonString(string $appVersion, string $uin, ?string $appid = nu
             "properties" => array(
                 "platform" => 2,
                 "language" => "zh",
-                "sdkVersion" => "1.3.36-RC01",
+                "sdkVersion" => SHIPLY_DEFAULT_SDK_VERSION,
                 "guid" => $uin,
                 "appVersion" => $appVersion,
-                "osVersion" => "34",
+                "osVersion" => "35",
                 "is64Bit" => true,
                 "bundleId" => $bundleId,
                 "uniqueId" => generateRandomUUID(),
