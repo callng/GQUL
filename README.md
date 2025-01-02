@@ -7,8 +7,8 @@
 ## 特性
 
 - 检索不同版本的 Android QQ 更新链接。
-- 支持 LiteGray 小范围灰度测试版本。
-- 可尝试获取 Android TIM 的更新链接。
+- 支持尝试获取 LiteGray 小范围灰度测试版本。
+- 支持尝试获取 Android TIM 的更新链接。
 
 ## 使用方法
 
@@ -17,18 +17,22 @@
 - 访问时需要正确拼接参数：
 
 ```get
-send.php?uin=114514&version=9.0.70%236676%230
+send.php?uin=114514&version=9.0.70
 ```
 
 - 可选参数：
 
 ```get
-send.php?uin=114514&version=9.0.70%236676%230&appid=537228245&targetApp=TIM
+send.php?uin=114514&version=9.0.70%236676%230&appid=537228245
+```
+
+```get
+send.php?uin=114514&version=4.0.95%234008&appid=537249218&targetApp=TIM
 ```
 
 - `uin`：QQ 号，例如 `114514`
-- `version`：当前版本信息（需要 URL 编码），例如 `9.0.70%236676%230`
-- `appid`（可选，默认内容为 `537230561`）：当前 QQ 版本的 appid，例如 `537228245`
+- `version`：当前 Android QQ 版本信息（需要 URL 编码），例如 `9.0.70%236676%230`（转义前为 `9.0.70#6676#0`）
+- `appid`（可选，默认内容为 `537230561`）：当前 Android QQ 版本的 appid，例如 `537228245`
 - `targetApp`（可选）：选择目标应用。当且仅当 `targetApp` 参数值为 `TIM` 时，请求目标应用为 TIM，否则请求目标应用为 `QQ`。
 
 ## 原理

@@ -29,12 +29,9 @@ if ($text === false) {
     exit(jsonExit(500, 'cipher_text does not exist'));
 }
 $data = json_decode(gzdecode(aesDecrypt(base64_decode($text), $key)), true); // 解密并解析返回数据
-if (json_last_error() !== JSON_ERROR_NONE) {
-    exit(jsonExit(501, 'cannot parse returned data'));
-}
-if (!isset($data['configs'])) {
-    exit(jsonExit(502, '该QQ目前不存在更新推送或已经是最新版本'));
-}
+if (json_last_error() !== JSON_ERROR_NONE) exit(jsonExit(501, 'cannot parse returned data'));
+if ($data['msg'] == 'request illegal') exit(jsonExit(502, 'Shiply 平台返回“请求非法”'));
+if (!isset($data['configs'])) exit(jsonExit(502, '该 QQ 目前不存在更新推送或已经是最新版本'));
 $value_content = json_decode($data['configs'][0]['value'], true);
 $config_value_content = json_decode($value_content['config_value'], true);
 exit(json_encode($config_value_content, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
