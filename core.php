@@ -4,8 +4,8 @@ const SHIPLY_APPID_QQ = "4cd6974be1";
 const SHIPLY_APPID_TIM = "ad6b501b0e";
 const SHIPLY_SIGN_ID_QQ = "0ccc46ca-154c-4c6b-8b0b-4d8537ffcbcc";
 const SHIPLY_SIGN_ID_TIM = "33641818-aee7-445a-82d4-b7d0bce3a85a";
-const SHIPLPACKAGE_NAME_QQ = "com.tencent.mobileqq";
-const SHIPLPACKAGE_NAME_TIM = "com.tencent.tim";
+const ANDROID_QQ_PACKAGE_NAME = "com.tencent.mobileqq";
+const ANDROID_TIM_PACKAGE_NAME = "com.tencent.tim";
 
 /**
  * 生成一个随机的UUID
@@ -46,7 +46,7 @@ function generateJsonString(string $appVersion, string $uin, ?string $appid = nu
     $isTim = strcasecmp($targetApp, "TIM") == 0;
     $appID = $isTim ? SHIPLY_APPID_TIM : SHIPLY_APPID_QQ;
     $signID = $isTim ? SHIPLY_SIGN_ID_TIM : SHIPLY_SIGN_ID_QQ;
-    $bundleId = $isTim ? SHIPLPACKAGE_NAME_TIM : SHIPLPACKAGE_NAME_QQ;
+    $bundleId = $isTim ? ANDROID_TIM_PACKAGE_NAME : ANDROID_QQ_PACKAGE_NAME;
     $data = array(
         "systemID" => "10016",
         "appID" => $appID,
