@@ -8,14 +8,14 @@ const ANDROID_QQ_PACKAGE_NAME = "com.tencent.mobileqq";
 const ANDROID_TIM_PACKAGE_NAME = "com.tencent.tim";
 
 /**
- * 生成一个随机的UUID
+ * 生成一个随机的 UUID
  *
- * @return string 返回生成的UUID
+ * @return string 返回生成的 UUID
  */
 function generateRandomUUID(): string
 {
     if (!function_exists('openssl_random_pseudo_bytes')) {
-        error_log('请开启openssl扩展');
+        error_log('请开启 OpenSSL 扩展');
         return false;
     }
     $data = openssl_random_pseudo_bytes(16);
@@ -65,7 +65,7 @@ function generateJsonString(string $appVersion, string $uin, ?string $appid = nu
                 "is64Bit" => true,
                 "bundleId" => $bundleId,
                 "uniqueId" => generateRandomUUID(),
-                "model" => "2304FPN6DC"
+                "model" => "2304FPN6DC" // Xiaomi 13 Ultra
             ),
             "isDebugPackage" => false,
             "customProperties" => array(
@@ -79,23 +79,15 @@ function generateJsonString(string $appVersion, string $uin, ?string $appid = nu
 }
 
 /**
- * 解析JSON并返回第一个cipher_text的数据
+ * 解析 JSON 并返回第一个 `cipher_text` 的数据
  *
- * @param string $jsonString 待解析的JSON字符串
- * @return string|bool 成功时返回cipher_text内容，失败时返回false
+ * @param string $jsonString 待解析的 JSON 字符串
+ * @return string|bool 成功时返回 `cipher_text` 内容，失败时返回 `false`
  */
 function getCipherText(string $jsonString): string|bool
 {
     $data = json_decode($jsonString, true);
-    if (json_last_error() !== JSON_ERROR_NONE) {
-        return false;
-    }
-    if (!empty($data['rsp_list'])) {
-        foreach ($data['rsp_list'] as $value) {
-            if (isset($value['cipher_text'])) {
-                return $value['cipher_text'];
-            }
-        }
-    }
+    if (json_last_error() !== JSON_ERROR_NONE) return false;
+    if (!empty($data['rsp_list'])) foreach ($data['rsp_list'] as $value) if (isset($value['cipher_text'])) return $value['cipher_text'];
     return false;
 }
